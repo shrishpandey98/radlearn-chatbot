@@ -14,6 +14,11 @@ from ui.styles import apply_styles
 from ui.sidebar import render_sidebar
 from ui.chat import render_chat
 
+@st.cache_resource(show_spinner=False)
+def init_db():
+    from scripts.setup_database import main
+    main()
+
 # 1. Page Configuration
 st.set_page_config(
     page_title="RadLearn | Radiology CME",
@@ -22,7 +27,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2. Inject CSS
+# 2. Initialize Database
+init_db()
+
+# 3. Inject CSS
 apply_styles()
 
 # 3. Render Sidebar
