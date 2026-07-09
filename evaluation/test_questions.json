@@ -1,0 +1,22 @@
+[
+    {"id": 1, "specialty": "neuro", "question": "What are the typical MRI findings for multiple sclerosis?"},
+    {"id": 2, "specialty": "neuro", "question": "How does glioblastoma appear on T1 post-contrast?"},
+    {"id": 3, "specialty": "neuro", "question": "Differentiate epidural from subdural hematoma on CT."},
+    {"id": 4, "specialty": "neuro", "question": "What is the dawnson fingers sign?"},
+    {"id": 5, "specialty": "breast", "question": "Explain the BI-RADS 4 subcategories."},
+    {"id": 6, "specialty": "breast", "question": "What are the mammographic features of fibroadenoma?"},
+    {"id": 7, "specialty": "breast", "question": "How does architectural distortion appear on tomosynthesis?"},
+    {"id": 8, "specialty": "breast", "question": "Indications for breast MRI screening."},
+    {"id": 9, "specialty": "chest", "question": "What are the HRCT findings of usual interstitial pneumonia (UIP)?"},
+    {"id": 10, "specialty": "chest", "question": "Compare COVID-19 pneumonia vs organizing pneumonia on CT."},
+    {"id": 11, "specialty": "chest", "question": "Signs of pulmonary embolism on CTPA."},
+    {"id": 12, "specialty": "chest", "question": "Tree-in-bud nodularity differential diagnosis."},
+    {"id": 13, "specialty": "abdominal", "question": "CT features of acute pancreatitis."},
+    {"id": 14, "specialty": "abdominal", "question": "Differentiate HCC from hemangioma on multiphase liver CT."},
+    {"id": 15, "specialty": "abdominal", "question": "Signs of appendicitis on ultrasound."},
+    {"id": 16, "specialty": "abdominal", "question": "What is the string sign in Crohn's disease?"},
+    {"id": 17, "specialty": "msk", "question": "MRI findings of an ACL tear."},
+    {"id": 18, "specialty": "msk", "question": "Radiographic features of osteoarthritis vs rheumatoid arthritis."},
+    {"id": 19, "specialty": "msk", "question": "What is a Jones fracture?"},
+    {"id": 20, "specialty": "msk", "question": "Appearance of osteosarcoma on plain film."}
+]

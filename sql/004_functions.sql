@@ -1,0 +1,5 @@
+-- sql/004_functions.sql
+-- No SQL functions needed with the ChromaDB + SQLite stack.
+-- Semantic search is handled by ChromaDB's Python API.
+-- Keyword search is handled by SQLite FTS5 in Python code.
+-- This file is intentionally empty but kept for structural consistency.

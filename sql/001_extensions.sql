@@ -1,0 +1,4 @@
+-- sql/001_extensions.sql
+-- ChromaDB stack: no PostgreSQL extensions needed.
+-- SQLite has FTS5 built in — enabled by default in Python's sqlite3 module.
+-- This file is intentionally empty but kept for structural consistency.

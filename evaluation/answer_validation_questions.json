@@ -1,0 +1,182 @@
+[
+  {
+    "id": "q1",
+    "question": "What does BI-RADS 4 indicate?",
+    "specialty": "breast",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q2",
+    "question": "What supplemental screening is recommended for dense breasts?",
+    "specialty": "breast",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q3",
+    "question": "At what age should routine breast cancer screening begin for average-risk women?",
+    "specialty": "breast",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q4",
+    "question": "How should a patient with newly diagnosed breast cancer be evaluated?",
+    "specialty": "breast",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q5",
+    "question": "What is the role of MRI in breast cancer screening?",
+    "specialty": "breast",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q6",
+    "question": "What imaging modalities are recommended for suspected intracranial aneurysm?",
+    "specialty": "neuro",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q7",
+    "question": "What imaging is appropriate for subarachnoid hemorrhage evaluation?",
+    "specialty": "neuro",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q8",
+    "question": "How are vascular malformations evaluated radiologically?",
+    "specialty": "neuro",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q9",
+    "question": "What imaging is preferred for plexopathy?",
+    "specialty": "neuro",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q10",
+    "question": "What are the major diagnostic criteria for tuberous sclerosis complex?",
+    "specialty": "neuro",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q11",
+    "question": "What is the recommended imaging workup for chronic cough?",
+    "specialty": "chest",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q12",
+    "question": "When is CT indicated in the evaluation of chronic cough?",
+    "specialty": "chest",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q13",
+    "question": "What imaging is appropriate for suspected diffuse lung disease?",
+    "specialty": "chest",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q14",
+    "question": "How should diffuse lung disease be followed over time?",
+    "specialty": "chest",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q15",
+    "question": "What imaging is appropriate in a patient with suspected acute aortic syndrome?",
+    "specialty": "chest",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q16",
+    "question": "What is the preferred imaging modality for suspected axial spondyloarthritis?",
+    "specialty": "spine",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q17",
+    "question": "When should imaging be obtained for low back pain?",
+    "specialty": "spine",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q18",
+    "question": "What imaging findings support a diagnosis of spinal infection?",
+    "specialty": "spine",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q19",
+    "question": "What is the initial imaging test of choice for suspected spine infection?",
+    "specialty": "spine",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q20",
+    "question": "How are spinal infections monitored for treatment response?",
+    "specialty": "spine",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q21",
+    "question": "How should an incidental adrenal mass be evaluated?",
+    "specialty": "abdominal",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q22",
+    "question": "What imaging modalities are recommended for localization of parathyroid adenoma?",
+    "specialty": "abdominal",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q23",
+    "question": "What is the recommended imaging approach for suspected retroperitoneal hemorrhage?",
+    "specialty": "abdominal",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q24",
+    "question": "What imaging is recommended for rectovaginal fistula?",
+    "specialty": "abdominal",
+    "expected_type": "positive"
+  },
+  {
+    "id": "q25",
+    "question": "What is the role of MRI in staging vaginal cancer?",
+    "specialty": "abdominal",
+    "expected_type": "positive"
+  },
+  {
+    "id": "n1",
+    "question": "What are MRI findings of multiple sclerosis?",
+    "specialty": "neuro",
+    "expected_type": "negative"
+  },
+  {
+    "id": "n2",
+    "question": "What are LI-RADS criteria?",
+    "specialty": "abdominal",
+    "expected_type": "negative"
+  },
+  {
+    "id": "n3",
+    "question": "What is the staging of pancreatic adenocarcinoma?",
+    "specialty": "abdominal",
+    "expected_type": "negative"
+  },
+  {
+    "id": "n4",
+    "question": "How is acute pancreatitis staged on CT?",
+    "specialty": "abdominal",
+    "expected_type": "negative"
+  },
+  {
+    "id": "n5",
+    "question": "What are Fleischner guidelines for pulmonary nodules?",
+    "specialty": "chest",
+    "expected_type": "negative"
+  }
+]
