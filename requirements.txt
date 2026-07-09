@@ -10,6 +10,7 @@ sqlalchemy==2.0.30
 
 # ── AI: LLM + Embeddings ─────────────────────────────────────────
 google-generativeai==0.5.4
+groq
 
 # ── Document Parsing ──────────────────────────────────────────────
 PyMuPDF==1.24.2
