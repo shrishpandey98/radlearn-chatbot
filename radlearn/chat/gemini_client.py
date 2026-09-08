@@ -26,6 +26,9 @@ class GeminiClient(BaseLLMClient):
     """
     def __init__(self, max_retries: int = 3):
         self.max_retries = max_retries
+        if GOOGLE_API_KEY:
+            genai.configure(api_key=GOOGLE_API_KEY)
+
 
     def generate_answer(self, system_instruction: str, user_prompt: str) -> str:
         """
