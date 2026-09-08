@@ -34,8 +34,9 @@ class GeminiClient(BaseLLMClient):
         """
         Calls Gemini to generate an answer with exponential backoff for rate limits.
         """
+        model_name = LLM_MODEL.replace("models/", "")
         model = genai.GenerativeModel(
-            model_name=LLM_MODEL,
+            model_name=model_name,
             system_instruction=system_instruction,
             generation_config=_generation_config
         )
@@ -44,10 +45,18 @@ class GeminiClient(BaseLLMClient):
         for attempt in range(1, self.max_retries + 1):
             try:
                 response = model.generate_content(user_prompt)
-                return response.text
+                try:
+                    return response.text
+                except Exception:
+                    if hasattr(response, "candidates") and response.candidates:
+                        parts_text = []
+                        for part in response.candidates[0].content.parts:
+                            if hasattr(part, "text") and part.text:
+                                parts_text.append(part.text)
+                        if parts_text:
+                            return "".join(parts_text)
+                    return ""
             except (ResourceExhausted, DeadlineExceeded) as e:
-                # We catch ResourceExhausted (quota limits) and allow it to bubble up 
-                # after retries are exhausted, or bubble up immediately if we choose.
                 last_error = e
                 wait_time = 2 ** attempt
                 logger.warning(f"Gemini API rate limit/timeout. Retrying in {wait_time}s... (Attempt {attempt}/{self.max_retries})")
@@ -56,13 +65,12 @@ class GeminiClient(BaseLLMClient):
                 logger.error(f"Gemini API Error: {e}")
                 raise e
                 
-        # If we exhausted all retries, raise the last ResourceExhausted error
-        # so the engine can catch it and return "quota_exceeded"
         raise last_error or RuntimeError("Failed to generate answer.")
 
     def generate_stream(self, system_instruction: str, user_prompt: str):
+        model_name = LLM_MODEL.replace("models/", "")
         model = genai.GenerativeModel(
-            model_name=LLM_MODEL,
+            model_name=model_name,
             system_instruction=system_instruction,
             generation_config=_generation_config
         )
@@ -72,9 +80,17 @@ class GeminiClient(BaseLLMClient):
             try:
                 response = model.generate_content(user_prompt, stream=True)
                 for chunk in response:
-                    if chunk.text:
-                        yield chunk.text
-                return # Exit successfully
+                    try:
+                        if chunk.text:
+                            yield chunk.text
+                    except Exception:
+                        if hasattr(chunk, "candidates") and chunk.candidates:
+                            for c in chunk.candidates:
+                                if hasattr(c, "content") and c.content and hasattr(c.content, "parts"):
+                                    for p in c.content.parts:
+                                        if hasattr(p, "text") and p.text:
+                                            yield p.text
+                return
             except (ResourceExhausted, DeadlineExceeded) as e:
                 last_error = e
                 wait_time = 2 ** attempt
@@ -85,3 +101,4 @@ class GeminiClient(BaseLLMClient):
                 raise e
                 
         raise last_error or RuntimeError("Failed to generate stream.")
+

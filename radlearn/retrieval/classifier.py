@@ -2,57 +2,57 @@
 radlearn/retrieval/classifier.py
 ─────────────────────────────────
 Analyzes user queries to determine question type and extract independent concepts.
+Optimized with fast heuristics to avoid slow blocking LLM roundtrips during retrieval.
 """
-import json
-from radlearn.chat.llm_factory import get_llm_client
-
-CLASSIFIER_PROMPT = """You are an expert radiology query analyzer.
-Your task is to analyze a user's question and output a JSON object with two fields:
-1. "type": The type of question. Must be one of ["factual", "explanatory", "comparison", "differential", "recommendation"].
-2. "concepts": A list of independent concepts, diseases, imaging modalities, or procedures found in the query. If the query asks to compare or differentiate, list each entity separately. 
-CRITICAL: Do NOT extract generic terms like "imaging modality", "diagnostic information", "patient", "treatment", or "preferred". Only extract specific medical conditions, anatomies, specific modalities (e.g. "MRI", "CT"), or procedures.
-
-Example 1:
-Question: "adrenal mass vs chronic cough"
-Output:
-{"type": "comparison", "concepts": ["adrenal mass", "chronic cough"]}
-
-Example 2:
-Question: "What are the key findings of MS on an MRI?"
-Output:
-{"type": "factual", "concepts": ["multiple sclerosis", "MRI"]}
-
-Example 3:
-Question: "CTA vs MRA in vasculitis"
-Output:
-{"type": "comparison", "concepts": ["CTA", "MRA", "vasculitis"]}
-
-Output ONLY valid JSON.
-"""
+import re
 
 def classify_query(query: str) -> dict:
     """
-    Classifies the question and extracts independent concepts using the LLM.
+    Fast heuristic classifier to eliminate redundant LLM latency (<1ms).
+    Extracts independent concepts when comparisons or differentials are asked.
     """
-    try:
-        client = get_llm_client()
-        raw_response = client.generate_answer(CLASSIFIER_PROMPT, f"Question: {query}")
+    if not query:
+        return {"type": "factual", "concepts": []}
         
-        # Parse JSON
-        start = raw_response.find("{")
-        end = raw_response.rfind("}") + 1
-        if start != -1 and end != 0:
-            json_str = raw_response[start:end]
-            result = json.loads(json_str)
-            # Ensure concepts is not empty
-            concepts = result.get("concepts", [])
-            if not concepts:
-                concepts = [query]
-            return {
-                "type": result.get("type", "factual"),
-                "concepts": concepts
-            }
-        else:
-            return {"type": "factual", "concepts": [query]}
-    except Exception as e:
-        return {"type": "factual", "concepts": [query]}
+    lower = query.lower().strip()
+    
+    # 1. Comparison detection
+    comp_delimiters = [r'\bvs\.?\b', r'\bversus\b', r'\bcompared to\b', r'\bdifference between\b']
+    for pat in comp_delimiters:
+        if re.search(pat, lower):
+            parts = [p.strip() for p in re.split(pat, query, flags=re.IGNORECASE) if p.strip()]
+            if len(parts) >= 2:
+                return {
+                    "type": "comparison",
+                    "concepts": parts
+                }
+                
+    # 2. Differential diagnosis detection
+    diff_keywords = ["differential", "ddx", "differentials", "possible causes", "etiology", "etiologies"]
+    if any(k in lower for k in diff_keywords):
+        return {
+            "type": "differential",
+            "concepts": [query.strip()]
+        }
+        
+    # 3. Recommendation / guidelines detection
+    rec_keywords = ["appropriate", "indication", "recommend", "guideline", "criteria", "next step", "management"]
+    if any(k in lower for k in rec_keywords):
+        return {
+            "type": "recommendation",
+            "concepts": [query.strip()]
+        }
+        
+    # 4. Explanatory
+    if lower.startswith(("why ", "how ", "explain")):
+        return {
+            "type": "explanatory",
+            "concepts": [query.strip()]
+        }
+        
+    # 5. Default factual
+    return {
+        "type": "factual",
+        "concepts": [query.strip()]
+    }
+

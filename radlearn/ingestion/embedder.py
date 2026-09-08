@@ -47,26 +47,9 @@ _tokenizer = tiktoken.get_encoding("cl100k_base")
 
 # ── Public API ────────────────────────────────────────────────────
 
-def embed_texts(texts: list[str]) -> list[list[float]]:
+def embed_texts(texts: list[str], task_type: str = "retrieval_document") -> list[list[float]]:
     """
-    Embed a list of text strings and return a list of 768-dim float vectors.
-
-    Processing:
-        1. Truncate each text to EMBEDDING_MAX_TOKENS if needed.
-        2. Split list into batches of EMBEDDING_BATCH_SIZE.
-        3. Call Google embedding API per batch.
-        4. Sleep 1 second between batches to respect rate limits.
-        5. Retry up to 3 times on API errors with exponential backoff.
-
-    Args:
-        texts: List of strings to embed.
-
-    Returns:
-        List of float vectors, one per input text.
-        Order is preserved.
-
-    Raises:
-        RuntimeError: If all retry attempts fail for a batch.
+    Embed a list of text strings and return a list of float vectors.
     """
     if not texts:
         return []
@@ -76,29 +59,40 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
     for batch_start in range(0, len(truncated), EMBEDDING_BATCH_SIZE):
         batch = truncated[batch_start : batch_start + EMBEDDING_BATCH_SIZE]
-        vectors = _embed_batch_with_retry(batch)
+        vectors = _embed_batch_with_retry(batch, task_type=task_type)
         all_vectors.extend(vectors)
 
-        # Rate limit: sleep between batches to stay within 100 req/min free tier.
-        # 20 texts/batch × 1 batch / 15s = 80 req/min — safely under the limit.
         if batch_start + EMBEDDING_BATCH_SIZE < len(truncated):
-            time.sleep(15.0)
+            time.sleep(1.0)
 
     return all_vectors
 
 
+from functools import lru_cache
+
+# In-memory LRU cache for query embeddings to eliminate API roundtrips for repeated/similar queries
+_QUERY_EMBED_CACHE: dict[str, list[float]] = {}
+
 def embed_single(text: str) -> list[float]:
     """
-    Convenience wrapper to embed a single string.
-
-    Args:
-        text: The string to embed.
-
-    Returns:
-        A single 768-dim float vector.
+    Convenience wrapper to embed a single query string with caching.
     """
-    results = embed_texts([text])
-    return results[0] if results else []
+    if not text:
+        return []
+    
+    clean_key = text.strip().lower()
+    if clean_key in _QUERY_EMBED_CACHE:
+        return _QUERY_EMBED_CACHE[clean_key]
+        
+    results = embed_texts([text], task_type="retrieval_query")
+    if results:
+        _QUERY_EMBED_CACHE[clean_key] = results[0]
+        # Keep cache bounded
+        if len(_QUERY_EMBED_CACHE) > 500:
+            _QUERY_EMBED_CACHE.pop(next(iter(_QUERY_EMBED_CACHE)))
+        return results[0]
+    return []
+
 
 
 # ── Private helpers ───────────────────────────────────────────────
@@ -112,23 +106,13 @@ def _truncate(text: str) -> str:
     return _tokenizer.decode(tokens[:EMBEDDING_MAX_TOKENS])
 
 
-def _embed_batch_with_retry(texts: list[str], max_attempts: int = 5) -> list[list[float]]:
+def _embed_batch_with_retry(texts: list[str], max_attempts: int = 5, task_type: str = "retrieval_document") -> list[list[float]]:
     """
     Call the Google embedding API for one batch.
-    On 429 errors, reads the retry_delay from the error message and waits
-    exactly that long before retrying — instead of guessing with fixed backoff.
-
-    Args:
-        texts:        Batch of strings (max EMBEDDING_BATCH_SIZE).
-        max_attempts: Number of retry attempts.
-
-    Returns:
-        List of float vectors.
-
-    Raises:
-        RuntimeError: After max_attempts consecutive failures.
     """
     import re
+    if GOOGLE_API_KEY:
+        genai.configure(api_key=GOOGLE_API_KEY)
     last_error: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
@@ -136,9 +120,10 @@ def _embed_batch_with_retry(texts: list[str], max_attempts: int = 5) -> list[lis
             result = genai.embed_content(
                 model=EMBEDDING_MODEL,
                 content=texts,
-                task_type="retrieval_document",
+                task_type=task_type,
             )
             embeddings = result["embedding"]
+
 
             # Validate dimension
             if embeddings and len(embeddings[0]) != EMBEDDING_DIM:

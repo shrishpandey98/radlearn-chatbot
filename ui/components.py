@@ -46,18 +46,48 @@ def render_source_card(citation: dict, msg_id: str):
     """
     st.markdown(html, unsafe_allow_html=True)
     
+    # Resolve file path dynamically so downloads work across any deployment directory
+    from radlearn.config import DOCUMENTS_DIR
+    import os
+    from pathlib import Path
+
     file_path = citation.get('file_path')
-    if file_path:
-        import os
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as f:
-                st.download_button(
-                    label=f"📥 Download Document",
-                    data=f,
-                    file_name=os.path.basename(file_path),
-                    mime="application/pdf",
-                    key=f"dl_{msg_id}_{citation['chunk_id']}_{citation['citation_number']}"
-                )
+    resolved_file = None
+
+    if file_path and os.path.isfile(file_path):
+        resolved_file = Path(file_path)
+    else:
+        doc_id = citation.get('document_id')
+        if doc_id:
+            candidate_dir = DOCUMENTS_DIR / str(doc_id)
+            if candidate_dir.is_dir():
+                found_files = list(candidate_dir.glob("*.pdf")) + list(candidate_dir.glob("*.docx")) + list(candidate_dir.glob("*.*"))
+                if found_files:
+                    resolved_file = found_files[0]
+        if not resolved_file and file_path:
+            base_name = os.path.basename(file_path)
+            candidate = DOCUMENTS_DIR / base_name
+            if candidate.is_file():
+                resolved_file = candidate
+            else:
+                matched = list(DOCUMENTS_DIR.rglob(base_name))
+                if matched:
+                    resolved_file = matched[0]
+
+    if resolved_file and resolved_file.exists():
+        try:
+            with open(resolved_file, "rb") as f:
+                file_bytes = f.read()
+            st.download_button(
+                label=f"📥 Download Source Document",
+                data=file_bytes,
+                file_name=resolved_file.name,
+                mime="application/pdf" if resolved_file.suffix.lower() == ".pdf" else "application/octet-stream",
+                key=f"dl_{msg_id}_{citation.get('chunk_id', '')}_{citation['citation_number']}"
+            )
+        except Exception as e:
+            st.caption(f"Document unavailable: {e}")
+
 
 def render_debug_chunks(chunks: list):
     """Render the raw retrieved chunks for debugging."""

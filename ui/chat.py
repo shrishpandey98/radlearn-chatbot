@@ -298,14 +298,29 @@ def render_chat():
                     st.session_state.messages.append({"role": "assistant", "content": error_msg, "is_error": True})
                 else:
                     t2 = time.time()
-                    stream_gen = get_llm_client().generate_stream(prep_res["sys_prompt"], prep_res["user_prompt"])
-                    
+                    client = get_llm_client()
+                    raw_answer = ""
                     placeholder = st.empty()
-                    with placeholder:
-                        raw_answer = st.write_stream(stream_gen)
+                    
+                    try:
+                        stream_gen = client.generate_stream(prep_res["sys_prompt"], prep_res["user_prompt"])
+                        with placeholder:
+                            raw_answer = st.write_stream(stream_gen)
+                    except Exception as stream_err:
+                        raw_answer = ""
+
+                    if not raw_answer:
+                        try:
+                            raw_answer = client.generate_answer(prep_res["sys_prompt"], prep_res["user_prompt"])
+                            placeholder.markdown(raw_answer)
+                        except Exception as gen_err:
+                            raw_answer = f"Error generating answer: {gen_err}"
+                            placeholder.markdown(raw_answer)
+
                     llm_gen_ms = int((time.time() - t2) * 1000)
                         
                     final_res = finalize_answer(raw_answer, prep_res["ranked_chunks"])
+
                     
                     # The new message index will be len(st.session_state.messages) - 1 since we already appended the user prompt
                     msg_id = str(len(st.session_state.messages))

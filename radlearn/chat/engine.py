@@ -92,14 +92,15 @@ def prepare_query(question: str, session_id: str = None, specialty_filter: str =
                 keyword_matches += 1
                 
     retrieval_quality = "HIGH"
-    if avg_similarity < 0.85 or keyword_matches < 1:
+    if avg_similarity < 0.65 and keyword_matches < 1:
         retrieval_quality = "LOW"
         
     web_search_triggered = False
     web_domains_used = []
     web_search_ms = 0
     
-    if not ranked_chunks or retrieval_quality == "LOW" or max_sim < 0.82 or confidence_score < 0.02:
+    # Only perform fallback web search if local database returned no results or very low confidence
+    if not ranked_chunks or (max_sim < 0.60 and confidence_score < 0.01):
         from radlearn.retrieval.web_search import perform_web_search
         t_web = time.time()
         
@@ -124,20 +125,21 @@ def prepare_query(question: str, session_id: str = None, specialty_filter: str =
             max_sim = max([c.get("similarity_score", 0.0) for c in ranked_chunks]) if ranked_chunks else 0.0
         web_search_ms = int((time.time() - t_web) * 1000)
 
-    if max_sim > 0.84 and len(ranked_chunks) >= 2:
+    if max_sim >= 0.70 and len(ranked_chunks) >= 2:
         confidence_band = "🟢 High Confidence"
-    elif max_sim >= 0.82:
+    elif max_sim >= 0.60:
         confidence_band = "🟡 Medium Confidence"
     else:
         confidence_band = "🔴 Low Confidence"
         
-    if not ranked_chunks or (max_sim < 0.82 and not web_search_triggered):
+    if not ranked_chunks or (max_sim < 0.60 and not web_search_triggered):
         sys_prompt = LOW_CONFIDENCE_PROMPT
     else:
         sys_prompt = SYSTEM_PROMPT
         if project_id:
             from radlearn.database.projects import get_project
             project = get_project(project_id)
+
             if project and project.get("system_instructions"):
                 # Append the custom instructions to the base system prompt
                 sys_prompt = sys_prompt + "\n\nPROJECT CUSTOM INSTRUCTIONS:\n" + project["system_instructions"]

@@ -31,7 +31,7 @@ def parse_citations(answer_text: str, retrieved_chunks: List[Dict]) -> List[Dict
             
             file_path = chunk.get("file_path", "")
             source_url = chunk.get("source_url", "")
-            if not file_path or not source_url:
+            if not chunk.get("document_id", "").startswith("pubmed_") and (not file_path or not source_url):
                 try:
                     import sqlite3
                     from radlearn.config import SQLITE_PATH
@@ -47,6 +47,7 @@ def parse_citations(answer_text: str, retrieved_chunks: List[Dict]) -> List[Dict
                     conn.close()
                 except Exception:
                     pass
+
 
             validated_citations.append({
                 "citation_number": cit_num,

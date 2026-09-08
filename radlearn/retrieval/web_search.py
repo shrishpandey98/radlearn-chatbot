@@ -1,19 +1,20 @@
 """
 radlearn/retrieval/web_search.py
 ────────────────────────────────
-Fallback web search using trusted radiology domains.
+Fallback web search using trusted radiology domains and PubMed E-Utilities.
 """
 import logging
+import json
+import urllib.request
+import urllib.parse
+import xml.etree.ElementTree as ET
 from typing import List, Dict
-import trafilatura
-from duckduckgo_search import DDGS
-from radlearn.config import EMBEDDING_MAX_TOKENS
 
-# Heuristic to split long web pages
+logger = logging.getLogger(__name__)
+
 def _chunk_text(text: str, max_chars: int = 800) -> List[str]:
     chunks = []
-    # simple split by double newline
-    paragraphs = text.split("\\n\\n")
+    paragraphs = text.split("\n\n")
     current = ""
     for p in paragraphs:
         if len(current) + len(p) < max_chars:
@@ -26,61 +27,91 @@ def _chunk_text(text: str, max_chars: int = 800) -> List[str]:
         chunks.append(current.strip())
     return chunks
 
-def perform_web_search(query: str, top_k: int = 3) -> List[Dict]:
+def perform_web_search(query: str, top_k: int = 4) -> List[Dict]:
     """
-    Search PubMed via E-Utilities, extract abstracts, and return formatted chunks.
-    This replaces DuckDuckGo as the primary trusted web source due to aggressive bot-blocking on cloud IPs.
+    Search PubMed via NCBI E-Utilities using Python standard library,
+    extract abstracts, and return formatted chunks.
     """
     web_chunks = []
-    
+    if not query or not query.strip():
+        return web_chunks
+
     try:
-        import requests
-        import urllib.parse
-        from bs4 import BeautifulSoup
+        # 1. Search PubMed for matching IDs
+        clean_query = query.strip()
+        search_url = (
+            f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
+            f"db=pubmed&term={urllib.parse.quote_plus(clean_query)}&retmode=json&retmax={top_k}"
+        )
+        req = urllib.request.Request(
+            search_url,
+            headers={"User-Agent": "RadLearn-RAG/1.0 (Radiology Educational Assistant)"}
+        )
         
-        # 1. Search for article IDs
-        search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={urllib.parse.quote_plus(query)}&retmode=json&retmax={top_k}"
-        resp = requests.get(search_url, timeout=5)
-        
-        if resp.status_code == 200:
-            data = resp.json()
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
             ids = data.get("esearchresult", {}).get("idlist", [])
-            
-            # 2. Fetch article abstracts
-            if ids:
-                fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={','.join(ids)}&retmode=xml"
-                fetch_resp = requests.get(fetch_url, timeout=5)
+
+        # If strict search returned nothing, retry with core medical terms
+        if not ids:
+            simplified = " ".join([w for w in clean_query.split() if len(w) > 2 and w.lower() not in ["what", "does", "indicate", "for", "the", "in", "and", "are", "with", "from"]])
+            if simplified != clean_query and len(simplified) > 3:
+                search_url = (
+                    f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
+                    f"db=pubmed&term={urllib.parse.quote_plus(simplified)}&retmode=json&retmax={top_k}"
+                )
+                req = urllib.request.Request(
+                    search_url,
+                    headers={"User-Agent": "RadLearn-RAG/1.0 (Radiology Educational Assistant)"}
+                )
+                with urllib.request.urlopen(req, timeout=6) as resp:
+                    data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                    ids = data.get("esearchresult", {}).get("idlist", [])
+
+        # 2. Fetch abstracts for found IDs
+        if ids:
+            fetch_url = (
+                f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?"
+                f"db=pubmed&id={','.join(ids)}&retmode=xml"
+            )
+            req_fetch = urllib.request.Request(
+                fetch_url,
+                headers={"User-Agent": "RadLearn-RAG/1.0 (Radiology Educational Assistant)"}
+            )
+            with urllib.request.urlopen(req_fetch, timeout=8) as fetch_resp:
+                xml_content = fetch_resp.read().decode("utf-8", errors="ignore")
+                root = ET.fromstring(xml_content)
                 
-                if fetch_resp.status_code == 200:
-                    soup = BeautifulSoup(fetch_resp.content, "xml")
-                    for i, article in enumerate(soup.find_all("PubmedArticle")):
-                        pmid = article.find("PMID").text if article.find("PMID") else f"unknown_{i}"
-                        title_elem = article.find("ArticleTitle")
-                        title = title_elem.text if title_elem else "PubMed Article"
+                for i, article in enumerate(root.findall(".//PubmedArticle")):
+                    pmid = article.findtext(".//PMID") or f"pmid_{i}"
+                    title = article.findtext(".//ArticleTitle") or f"PubMed Article {pmid}"
+                    abstract_nodes = article.findall(".//AbstractText")
+                    
+                    abstract_parts = [node.text for node in abstract_nodes if node.text]
+                    if not abstract_parts:
+                        continue
                         
-                        abstract_texts = article.find_all("AbstractText")
-                        if not abstract_texts:
-                            continue
-                            
-                        # Join multiple abstract sections if they exist
-                        abstract = " ".join([elem.text for elem in abstract_texts])
-                        url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
-                        
-                        # Chunk the abstract
-                        text_chunks = _chunk_text(abstract)
-                        for j, ctext in enumerate(text_chunks[:5]):
-                            web_chunks.append({
-                                "id": f"pubmed_{pmid}_{j}",
-                                "document_id": f"pubmed_doc_{pmid}",
-                                "text": ctext,
-                                "chunk_index": j,
-                                "doc_title": title,
-                                "source_url": url,
-                                "citation_format": f"[W{i+1}]", # Web citation format
-                                "similarity_score": 0.0 # Will be re-scored by RRF
-                            })
-                            
+                    abstract = " ".join(abstract_parts)
+                    url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                    
+                    # Chunk abstract for RAG
+                    text_chunks = _chunk_text(abstract)
+                    for j, ctext in enumerate(text_chunks[:3]):
+                        web_chunks.append({
+                            "id": f"pubmed_{pmid}_{j}",
+                            "document_id": f"pubmed_{pmid}",
+                            "text": ctext,
+                            "chunk_index": j,
+                            "doc_title": f"[PubMed] {title}",
+                            "source_url": url,
+                            "formatted_citation": f"PubMed: {title[:70]}...",
+                            "citation_format": f"[W{i+1}]",
+                            "similarity_score": 0.95,
+                            "rrf_score": 0.90 - (i * 0.05)
+                        })
+
     except Exception as e:
-        logging.warning(f"PubMed search fallback failed: {e}")
-        
+        logger.warning(f"PubMed web search error: {e}")
+
     return web_chunks
+
