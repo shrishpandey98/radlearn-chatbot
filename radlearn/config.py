@@ -85,7 +85,7 @@ CONTEXT_CHUNKS: int = 5    # Chunks sent to LLM
 IMAGE_TOP_K: int = 3       # Images returned per answer
 
 # ── LLM ──────────────────────────────────────────────────────────
-LLM_PROVIDER: str = _get("LLM_PROVIDER", "gemini").lower()
+LLM_PROVIDER: str = _get("LLM_PROVIDER", "groq").lower()
 
 def _resolve_default_model(provider: str) -> str:
     if provider == "groq":
@@ -96,11 +96,12 @@ def _resolve_default_model(provider: str) -> str:
         return "gpt-4o-mini"
     elif provider == "anthropic":
         return "claude-3-5-sonnet-20241022"
-    return "gemini-2.5-flash"
+    return "openai/gpt-oss-120b"
 
 LLM_MODEL: str = _get("LLM_MODEL", _resolve_default_model(LLM_PROVIDER))
 LLM_TEMPERATURE: float = float(_get("LLM_TEMPERATURE", "0.1"))
 LLM_MAX_TOKENS: int = int(_get("LLM_MAX_TOKENS", "1024"))
+
 
 
 
