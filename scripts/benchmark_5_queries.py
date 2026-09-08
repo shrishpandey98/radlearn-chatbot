@@ -31,8 +31,8 @@ def run_benchmark():
             )
             
             ranked = reciprocal_rank_fusion(
-                semantic_results=results["semantic_results"],
-                keyword_results=results["keyword_results"]
+                semantic_results_list=[results["semantic_results"]],
+                keyword_results_list=[results["keyword_results"]]
             )
             
             for j, chunk in enumerate(ranked[:5]):

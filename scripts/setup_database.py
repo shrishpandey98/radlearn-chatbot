@@ -62,7 +62,7 @@ def main() -> None:
     sql_dir = ROOT / "sql"
     engine = get_engine()
 
-    for filename in ["002_tables.sql", "003_indexes.sql", "004_projects.sql"]:
+    for filename in ["002_tables.sql", "003_indexes.sql"]:
         file_path = sql_dir / filename
         if not file_path.exists():
             print(f"⚠️   {filename} not found — skipping")
