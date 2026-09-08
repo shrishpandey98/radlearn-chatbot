@@ -56,6 +56,9 @@ for _d in [DATA_DIR, CHROMA_DIR, DOCUMENTS_DIR, IMAGES_DIR]:
 
 # ── API Keys ──────────────────────────────────────────────────────
 GOOGLE_API_KEY: str = _get("GOOGLE_API_KEY")
+GROQ_API_KEY: str = _get("GROQ_API_KEY")
+OPENAI_API_KEY: str = _get("OPENAI_API_KEY")
+ANTHROPIC_API_KEY: str = _get("ANTHROPIC_API_KEY")
 ADMIN_PASSWORD: str = _get("ADMIN_PASSWORD", "radlearn-admin")
 
 # ── ChromaDB collection names ─────────────────────────────────────
@@ -82,9 +85,23 @@ CONTEXT_CHUNKS: int = 5    # Chunks sent to LLM
 IMAGE_TOP_K: int = 3       # Images returned per answer
 
 # ── LLM ──────────────────────────────────────────────────────────
-LLM_MODEL: str = "llama-3.1-8b-instant"
-LLM_TEMPERATURE: float = 0.1
-LLM_MAX_TOKENS: int = 1024
+LLM_PROVIDER: str = _get("LLM_PROVIDER", "groq").lower()
+
+def _resolve_default_model(provider: str) -> str:
+    if provider == "groq":
+        return "llama-3.3-70b-versatile"
+    elif provider == "gemini":
+        return "gemini-1.5-flash"
+    elif provider == "openai":
+        return "gpt-4o-mini"
+    elif provider == "anthropic":
+        return "cla-3-5-sonnet-20241022"
+    return "llama-3.3-70b-versatile"
+
+LLM_MODEL: str = _get("LLM_MODEL", _resolve_default_model(LLM_PROVIDER))
+LLM_TEMPERATURE: float = float(_get("LLM_TEMPERATURE", "0.1"))
+LLM_MAX_TOKENS: int = int(_get("LLM_MAX_TOKENS", "1024"))
+
 
 # ── Document ingestion limits ─────────────────────────────────────
 MAX_FILE_SIZE_BYTES: int = 50 * 1024 * 1024   # 50 MB

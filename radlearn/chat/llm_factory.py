@@ -3,17 +3,15 @@ radlearn/chat/llm_factory.py
 ────────────────────────────
 Factory pattern to instantiate the appropriate LLM client based on config.
 """
-import os
+from radlearn.config import LLM_PROVIDER
 from radlearn.chat.llm_base import BaseLLMClient
-
-# In the future, this can be driven by radlearn.config.LLM_PROVIDER
-DEFAULT_PROVIDER = "gemini"
 
 def get_llm_client() -> BaseLLMClient:
     """
     Factory function to return the configured LLM client.
     """
-    provider = os.getenv("LLM_PROVIDER", "groq").lower()
+    provider = LLM_PROVIDER.lower()
+
 
     if provider == "groq":
         from radlearn.chat.groq_client import GroqClient

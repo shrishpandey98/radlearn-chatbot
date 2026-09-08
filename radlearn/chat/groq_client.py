@@ -1,6 +1,6 @@
 import os
 from groq import Groq
-from radlearn.config import LLM_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
+from radlearn.config import GROQ_API_KEY, LLM_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
 from radlearn.chat.llm_base import BaseLLMClient
 
 class GroqClient(BaseLLMClient):
@@ -8,12 +8,13 @@ class GroqClient(BaseLLMClient):
     Implementation of the Groq API client using the official SDK.
     """
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key = GROQ_API_KEY or os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is missing.")
             
         self.client = Groq(api_key=api_key)
         self.model_name = LLM_MODEL
+
 
     def generate_answer(self, system_instruction: str, user_prompt: str) -> str:
         """
