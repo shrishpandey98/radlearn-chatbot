@@ -171,6 +171,7 @@ def prepare_query(question: str, session_id: str = None, specialty_filter: str =
 def finalize_answer(raw_answer: str, ranked_chunks: list) -> dict:
     """
     Process raw text streamed from the LLM, format citations and validate them.
+    Preserves partial answers for multi-part questions while handling pure refusals.
     """
     if not ranked_chunks:
         return {
@@ -178,26 +179,28 @@ def finalize_answer(raw_answer: str, ranked_chunks: list) -> dict:
             "citations": []
         }
         
-    REFUSAL_PATTERNS = [
-        "does not contain sufficient information",
-        "knowledge base does not contain",
-        "cannot answer",
-        "not available in the provided context",
-        "insufficient information",
-        "unable to answer",
-        "not mentioned in the provided context",
-        "do not have information about this",
-        "no information is available"
+    stripped = raw_answer.strip()
+    lower_ans = stripped.lower()
+    word_count = len(stripped.split())
+    has_citations = bool(re.search(r'<<\d+>>|\[\d+\]', raw_answer))
+    has_structure = any(h in raw_answer for h in ["## Answer", "## Key Findings", "## Clinical Significance", "1.", "2.", "•", "- "])
+
+    # Only treat as a complete refusal if the model gave a short standalone refusal with no citations or structured content
+    REFUSAL_STARTS = [
+        "we could not find sufficient evidence",
+        "i do not have information about this",
+        "the current knowledge base references this topic but does not contain",
+        "not available in the knowledge base",
+        "cannot answer this question"
     ]
+    is_pure_refusal = (word_count < 35 and not has_citations and not has_structure and any(lower_ans.startswith(p) or lower_ans == p for p in REFUSAL_STARTS))
     
-    lower_ans = raw_answer.lower()
-    is_refusal = any(pat in lower_ans for pat in REFUSAL_PATTERNS)
-    
-    if is_refusal:
+    if is_pure_refusal:
         return {
             "answer": "We could not find sufficient evidence in the current knowledge base or trusted web sources to answer this question confidently.",
             "citations": []
         }
+
         
     # 1. Strip out PDF bibliography pollution (any existing [N] brackets)
     answer = re.sub(r'\[[\d\s,\-]+\]', '', raw_answer)
